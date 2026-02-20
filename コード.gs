@@ -164,18 +164,31 @@ function scheduleNextRun() {
 }
 
 // Google Calendar APIを使用してイベントを取得する関数
-function getCalendarEvents(eventIds, startTime, endTime, initialSync = false) {
+// options.updatedMin: 増分同期時に指定。この時刻以降に変更されたイベントのみ取得
+function getCalendarEvents(eventIds, startTime, endTime, options = {}) {
   let events = [];
   for (const eventId of eventIds) {
     let pageToken;
     do {
       const params = {
-        timeMin: startTime.toISOString(),
-        timeMax: endTime.toISOString(),
         singleEvents: true,
-        orderBy: 'startTime',
+        timeMax: endTime.toISOString(),
         pageToken: pageToken
       };
+
+      if (startTime) {
+        params.timeMin = startTime.toISOString();
+      }
+
+      if (options.updatedMin) {
+        // 増分同期: 前回同期以降に変更されたイベントのみ取得（削除含む）
+        params.updatedMin = options.updatedMin.toISOString();
+        params.showDeleted = true;
+        // orderBy: 'startTime' は削除イベント（startなし）と相性が悪いため省略
+      } else {
+        // 初期同期: 開始時刻順で取得
+        params.orderBy = 'startTime';
+      }
 
       const response = Calendar.Events.list(eventId, params);
 
@@ -335,7 +348,8 @@ function performIncrementalSync(errorMessages) {
 
     let eventIndex = parseInt(props.getProperty(EVENT_INDEX_KEY) || '0');
 
-    const allEvents = getCalendarEvents(eventIds, lastSyncTimestamp, futureDate);
+    // updatedMinで前回同期以降の変更のみ取得（削除・更新・新規すべて検知）
+    const allEvents = getCalendarEvents(eventIds, null, futureDate, { updatedMin: lastSyncTimestamp });
 
     const batchSize = 50; // 一度に処理するイベント数
     const maxExecutionTime = 5 * 60 * 1000; // 最大実行時間（ミリ秒）
