@@ -295,8 +295,8 @@ function performInitialSync(errorMessages) {
     const props = PropertiesService.getScriptProperties();
     let eventIndex = parseInt(props.getProperty(EVENT_INDEX_KEY) || '0');
 
-    // 初期同期では true を渡して全ての未来の予定を取得
-    const allEvents = getCalendarEvents(eventIds, now, futureDate, true);
+    // 初期同期: updatedMin不要、開始時刻順で全イベント取得
+    const allEvents = getCalendarEvents(eventIds, now, futureDate);
 
     const batchSize = 50; // 一度に処理するイベント数
     const maxExecutionTime = 5 * 60 * 1000; // 最大実行時間（ミリ秒）
